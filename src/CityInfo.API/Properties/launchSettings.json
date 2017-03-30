@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:15556/",
+      "applicationUrl": "http://localhost:10280/",
       "sslPort": 0
     }
   },
@@ -12,7 +12,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Debug",
+        "connectionStrings:cityInfoDBConnectionString": "Server=(localdb)\\mssqllocaldb;Database=CityInfoProductionDB;Trusted_Connection=True;"
       }
     },
     "CityInfo.API": {
