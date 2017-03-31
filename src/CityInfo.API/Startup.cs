@@ -58,7 +58,9 @@ namespace CityInfo.API
             services.AddDbContext<CityInfoContext>(o => o.UseSqlServer(connectionString));
 
             services.AddScoped<ICityInfoRepository, CityInfoRepository>();
-            services.AddIdentity<IdentityUser, IdentityRole>();
+            services.AddIdentity<IdentityUser, IdentityRole>()
+                .AddEntityFrameworkStores<Entities.CityInfoContext>()
+                .AddDefaultTokenProviders();
 
         }
 
@@ -92,8 +94,12 @@ namespace CityInfo.API
                 cfg.CreateMap<Models.PointOfInterestForCreationDto, Entities.PointOfInterest>();
                 cfg.CreateMap<Models.PointOfInterestForUpdateDto, Entities.PointOfInterest>();
                 cfg.CreateMap<Entities.PointOfInterest, Models.PointOfInterestForUpdateDto>();
+                cfg.CreateMap<Models.CityWithoutPointsOfInterestDto, Entities.City>();
+                cfg.CreateMap<Models.CityWithoutPointsOfInterestForCreationDto, Entities.City>();
 
             });
+
+            app.UseIdentity();
 
             app.UseMvc();
 

@@ -46,6 +46,16 @@ namespace CityInfo.API.Services
             return _context.Cities.Where(c => c.Id == cityId).FirstOrDefault();
         }
 
+        public void AddCity(City city)
+        {
+            _context.Cities.Add(city);
+        }
+
+        public void DeleteCity(City city)
+        {
+            _context.Cities.Remove(city);
+        }
+
         public PointOfInterest GetPointOfInterestForCity(int cityId, int pointOfInterestId)
         {
             return _context.PointsOfInterest

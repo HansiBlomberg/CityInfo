@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CityInfo.API.Models;
 using CityInfo.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 namespace CityInfo.API.Controllers
 {
 
+    [Authorize]
     [Route("api/cities")]
     public class PointsOfInterestController : Controller
     {
@@ -28,6 +30,7 @@ namespace CityInfo.API.Controllers
             _cityInfoRepository = cityInfoRepository;
         }
 
+        [Authorize(Roles = "Administrator, CityManager, Explorer")]
         [HttpGet("{cityId}/pointsofinterest")]
         public IActionResult GetPointsOfInterest(int cityId)
         {
@@ -59,6 +62,7 @@ namespace CityInfo.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Administrator, CityManager, Explorer")]
         [HttpGet("{cityId}/pointsofinterest/{id}", Name = "GetPointOfInterest")]
         public IActionResult GetPointOfInterest(int cityId, int id)
         {
@@ -98,6 +102,7 @@ namespace CityInfo.API.Controllers
 
         }
 
+        [Authorize(Roles = "Administrator")]
         [HttpPost("{cityId}/pointsofinterest")]
         public IActionResult CreatePointOfInterest(int cityId, 
             [FromBody] PointOfInterestForCreationDto pointOfInterest)
@@ -145,6 +150,7 @@ namespace CityInfo.API.Controllers
             return createdAt;
         }
 
+        [Authorize(Roles = "Administrator")]
         [HttpPut("{cityId}/pointsofinterest/{id}")]
         public IActionResult UpdatePointOfInterest(int cityId, int id, 
             [FromBody] PointOfInterestForUpdateDto pointOfInterest)
@@ -188,6 +194,7 @@ namespace CityInfo.API.Controllers
 
         }
 
+        [Authorize(Roles = "Administrator")]
         [HttpPatch("{cityId}/pointsofinterest/{id}")]
         public IActionResult PartiallyUpdatePointOfInterest(int cityId, int id,
             [FromBody] JsonPatchDocument<PointOfInterestForUpdateDto> patchDoc)
@@ -241,6 +248,7 @@ namespace CityInfo.API.Controllers
 
         }
 
+        [Authorize(Roles = "Administrator")]
         [HttpDelete("{cityId}/pointsofinterest/{id}")]
         public IActionResult DeletePointOfInterest(int cityId, int id)
         {

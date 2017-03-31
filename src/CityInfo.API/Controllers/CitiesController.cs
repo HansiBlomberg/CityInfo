@@ -2,6 +2,7 @@
 using AutoMapper;
 using CityInfo.API.Models;
 using CityInfo.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace CityInfo.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     public class CitiesController : Controller
     {
@@ -20,7 +22,10 @@ namespace CityInfo.API.Controllers
             _cityInfoRepository = cityInfoRepository;
         }
 
-        [HttpGet()]
+        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [HttpGet]
+        
+
         public IActionResult GetCities()
         {
             // return Ok(CitiesDataStore.Current.Cities);
@@ -28,28 +33,14 @@ namespace CityInfo.API.Controllers
 
             var results = Mapper.Map<IEnumerable<CityWithoutPointsOfInterestDto>>(cityEntities);
             
-            // var results = new List<CityWithoutPointsOfInterestDto>();
-
-            //foreach(var cityEntity in cityEntities)
-            //{
-            //    results.Add(new CityWithoutPointsOfInterestDto
-            //    {
-            //        Id = cityEntity.Id,
-            //        Description = cityEntity.Description,
-            //        Name = cityEntity.Name
-                
-            //    });
-                
-            //}
-
-
-
             return Ok(results);
 
 
         }
 
-        [HttpGet("{id}")]
+        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [HttpGet("{id}", Name = "GetCity")]
+       
         public IActionResult GetCity(int id, bool includePointsOfInterest = false )
         {
 
@@ -71,13 +62,47 @@ namespace CityInfo.API.Controllers
             return Ok(cityWithoutPointsOfInterestResult);
 
             
-            //var cityToReturn = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == id);
-       
-            //if(cityToReturn == null)
-            //{
-            //    return NotFound();
-            //}
-            //return Ok(cityToReturn);
+        }
+
+        [Authorize(Roles = "Administrator, CityManager")]
+        [HttpPost]
+        public IActionResult CreateCity([FromBody] CityWithoutPointsOfInterestForCreationDto city)
+        {
+            if (city == null)
+            {
+                return BadRequest();
+            }
+
+            if (city.Description == city.Name)
+            {
+                ModelState.AddModelError("Description", "The provided description should be different from the name.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+
+           
+            var finalCity = Mapper.Map<Entities.City>(city);
+
+            _cityInfoRepository.AddCity(finalCity);
+
+            if (!_cityInfoRepository.Save())
+            {
+                return StatusCode(500, "A problem happened while handling your request.");
+            }
+
+            var createdCityToReturn = Mapper.Map<Models.CityWithoutPointsOfInterestDto>(finalCity);
+
+            var createdAt = CreatedAtRoute(
+              routeName: "GetCity",
+              routeValues: new
+              { id = createdCityToReturn.Id },
+              value: createdCityToReturn);
+
+            return createdAt;
         }
 
     }
