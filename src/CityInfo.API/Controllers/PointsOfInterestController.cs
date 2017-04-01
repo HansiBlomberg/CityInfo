@@ -43,7 +43,6 @@ namespace CityInfo.API.Controllers
 
                 // var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
 
-              
 
                 if (!_cityInfoRepository.CityExists(cityId))
                 {
@@ -66,6 +65,8 @@ namespace CityInfo.API.Controllers
                 return StatusCode(500, "A problem happened while handling your request.");
             }
         }
+
+       
 
         [Authorize(Roles = "Administrator, CityManager, Explorer, Traveler")]
         [HttpGet("{cityId}/pointsofinterest/{id}", Name = "GetPointOfInterest")]
@@ -107,12 +108,20 @@ namespace CityInfo.API.Controllers
 
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Traveler")]
         [HttpPost("{cityId}/pointsofinterest")]
         public IActionResult CreatePointOfInterest(int cityId, 
             [FromBody] PointOfInterestForCreationDto pointOfInterest)
         {
-            if(pointOfInterest == null)
+
+            // A traveler can only access this method if the traveler has visited the city!
+            if (blockTravelerWhoNeverVisitedCity(cityId))
+            {
+                return NotFound();
+            }
+
+
+            if (pointOfInterest == null)
             {
                 return BadRequest();
             }
@@ -155,11 +164,18 @@ namespace CityInfo.API.Controllers
             return createdAt;
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Traveler")]
         [HttpPut("{cityId}/pointsofinterest/{id}")]
         public IActionResult UpdatePointOfInterest(int cityId, int id, 
             [FromBody] PointOfInterestForUpdateDto pointOfInterest)
         {
+
+            // A traveler can only access this method if the traveler has visited the city!
+            if (blockTravelerWhoNeverVisitedCity(cityId))
+            {
+                return NotFound();
+            }
+
             if (pointOfInterest == null)
             {
                 return BadRequest();
@@ -199,12 +215,19 @@ namespace CityInfo.API.Controllers
 
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Traveler")]
         [HttpPatch("{cityId}/pointsofinterest/{id}")]
         public IActionResult PartiallyUpdatePointOfInterest(int cityId, int id,
             [FromBody] JsonPatchDocument<PointOfInterestForUpdateDto> patchDoc)
         {
-            if(patchDoc == null )
+
+            // A traveler can only access this method if the traveler has visited the city!
+            if (blockTravelerWhoNeverVisitedCity(cityId))
+            {
+                return NotFound();
+            }
+
+            if (patchDoc == null )
             {
                 return BadRequest();
             }
@@ -253,10 +276,17 @@ namespace CityInfo.API.Controllers
 
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, Traveler")]
         [HttpDelete("{cityId}/pointsofinterest/{id}")]
         public IActionResult DeletePointOfInterest(int cityId, int id)
         {
+
+            // A traveler can only access this method if the traveler has visited the city!
+            if (blockTravelerWhoNeverVisitedCity(cityId))
+            {
+                return NotFound();
+            }
+
             if (!_cityInfoRepository.CityExists(cityId))
             {
                 return NotFound();
@@ -280,6 +310,40 @@ namespace CityInfo.API.Controllers
 
             return NoContent();
 
+        }
+
+
+        private bool blockTravelerWhoNeverVisitedCity(int cityId)
+        {
+
+            if (User.IsInRole("Traveler"))
+            {
+                // Traveller can only create, update, remove points of interests if city id is
+                // in the comma separated list of city ids:s in ClaimValue of ClaimType VisitedCities
+                var visitedCitiesClaim = User.Claims.SingleOrDefault(claim => claim.Type == "VisitedCities");
+                if (visitedCitiesClaim == null)
+                {
+                    return true;
+                }
+                var visitedCitiesCommaSeparated = visitedCitiesClaim.Value;
+
+                var visitedCities = visitedCitiesCommaSeparated.Split(',');
+                var visitedCitiesIds = new List<int>();
+                var tempId = 0;
+                foreach (var visitedCity in visitedCities)
+                {
+                    if (int.TryParse(visitedCity, out tempId))
+                    {
+                        visitedCitiesIds.Add(tempId);
+                    }
+                }
+                if (visitedCitiesIds.Contains(cityId))
+                {
+                    return false;  // Dont block this user, user is traveler and have visited the city
+                }
+                return true; // block user, user is traveler but have not visited the city
+            }
+            return false; // Dont block this user, user is not traveler.
         }
 
     }
