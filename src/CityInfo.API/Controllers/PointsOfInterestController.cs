@@ -30,17 +30,22 @@ namespace CityInfo.API.Controllers
             _cityInfoRepository = cityInfoRepository;
         }
 
-        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [Authorize(Roles = "Administrator, CityManager, Explorer, Traveler")]
         [HttpGet("{cityId}/pointsofinterest")]
         public IActionResult GetPointsOfInterest(int cityId)
         {
+
+          
+
             try
             {
-               // throw new Exception("Exception test!!");
+                // throw new Exception("Exception test!!");
 
                 // var city = CitiesDataStore.Current.Cities.FirstOrDefault(c => c.Id == cityId);
 
-                if(!_cityInfoRepository.CityExists(cityId))
+              
+
+                if (!_cityInfoRepository.CityExists(cityId))
                 {
                     _logger.LogInformation($"City with id {cityId} wasn't found when accessing points of interest.");
                     return NotFound();
@@ -62,7 +67,7 @@ namespace CityInfo.API.Controllers
             }
         }
 
-        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [Authorize(Roles = "Administrator, CityManager, Explorer, Traveler")]
         [HttpGet("{cityId}/pointsofinterest/{id}", Name = "GetPointOfInterest")]
         public IActionResult GetPointOfInterest(int cityId, int id)
         {

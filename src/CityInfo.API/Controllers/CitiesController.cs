@@ -3,6 +3,7 @@ using AutoMapper;
 using CityInfo.API.Models;
 using CityInfo.API.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -16,13 +17,16 @@ namespace CityInfo.API.Controllers
     public class CitiesController : Controller
     {
         private ICityInfoRepository _cityInfoRepository;
+        private IMailService _mailService;
 
-        public CitiesController(ICityInfoRepository cityInfoRepository)
+        public CitiesController(ICityInfoRepository cityInfoRepository,
+            IMailService mailService)
         {
             _cityInfoRepository = cityInfoRepository;
+            _mailService = mailService;
         }
 
-        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [Authorize(Roles = "Administrator, CityManager, Explorer, Traveler")]
         [HttpGet]
         
 
@@ -38,7 +42,7 @@ namespace CityInfo.API.Controllers
 
         }
 
-        [Authorize(Roles = "Administrator, CityManager, Explorer")]
+        [Authorize(Roles = "Administrator, CityManager, Explorer, Traveler")]
         [HttpGet("{id}", Name = "GetCity")]
        
         public IActionResult GetCity(int id, bool includePointsOfInterest = false )
@@ -103,6 +107,119 @@ namespace CityInfo.API.Controllers
               value: createdCityToReturn);
 
             return createdAt;
+        }
+
+        [Authorize(Roles = "Administrator, CityManager")]
+        [HttpPut("{id}")]
+        public IActionResult UpdateCity(int id,
+           [FromBody] CityWithoutPointsOfInterestForUpdateDto city)
+        {
+            if (city == null)
+            {
+                return BadRequest();
+            }
+
+            if (city.Description == city.Name)
+            {
+                ModelState.AddModelError("Description", "The provided description should be different from the name.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+
+            var cityEntity = _cityInfoRepository.GetCity(id);
+            if (cityEntity == null)
+            {
+                return NotFound();
+            }
+
+            Mapper.Map(city, cityEntity);
+
+            if (!_cityInfoRepository.Save())
+            {
+                return StatusCode(500, "A problem happened while handling your request.");
+            }
+
+            return NoContent();
+
+
+        }
+        [Authorize(Roles = "Administrator, CityManager")]
+        [HttpPatch("{id}")]
+        public IActionResult PartiallyUpdatePointOfInterest(int id,
+            [FromBody] JsonPatchDocument<CityWithoutPointsOfInterestForUpdateDto> patchDoc)
+        {
+            if (patchDoc == null)
+            {
+                return BadRequest();
+            }
+
+            var cityEntity = _cityInfoRepository.GetCity(id);
+            if (cityEntity == null)
+            {
+                return NotFound();
+            }
+
+            var cityToPatch = Mapper.Map<CityWithoutPointsOfInterestForUpdateDto>(cityEntity);
+
+            patchDoc.ApplyTo(cityToPatch, ModelState);
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (cityToPatch.Description == cityToPatch.Name)
+            {
+                ModelState.AddModelError("Description", "The provided description should be different from the name.");
+            }
+
+            TryValidateModel(cityToPatch);
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+
+            Mapper.Map(cityToPatch, cityEntity);
+
+            if (!_cityInfoRepository.Save())
+            {
+                return StatusCode(500, "A problem happened while handling your request.");
+            }
+
+
+            return NoContent();
+
+        }
+
+        [Authorize(Roles = "Administrator, CityManager")]
+        [HttpDelete("{id}")]
+        public IActionResult DeleteCity(int id)
+        {
+         
+
+            var cityEntity = _cityInfoRepository.GetCity(id);
+            if (cityEntity == null)
+            {
+                return NotFound();
+            }
+
+            _cityInfoRepository.DeleteCity(cityEntity);
+
+            if (!_cityInfoRepository.Save())
+            {
+                return StatusCode(500, "A problem happened while handling your request.");
+            }
+
+            _mailService.Send("Point of interest deleted.",
+                $"Point of interest {cityEntity.Name} with id {cityEntity.Id} was deleted.");
+
+            return NoContent();
+
         }
 
     }
